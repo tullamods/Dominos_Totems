@@ -170,11 +170,11 @@ end
 function SpellButton:UPDATE_SHAPESHIFT_FORM()
 	self:UpdateSpell()
 end
-
+--[[
 function SpellButton:UPDATE_BINDINGS()
 	self:UpdateHotkey()
 end
-
+--]]
 function SpellButton:START_AUTOREPEAT_SPELL()
 	self:UpdateState()
 end
@@ -256,7 +256,7 @@ function SpellButton:UpdateEvents()
 
 		self:RegisterEvent('PLAYER_ENTERING_WORLD')
 		self:RegisterEvent('SPELLS_CHANGED')
-		self:RegisterEvent('UPDATE_BINDINGS')
+--		self:RegisterEvent('UPDATE_BINDINGS')
 	end
 end
 

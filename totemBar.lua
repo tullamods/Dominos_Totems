@@ -203,6 +203,11 @@ function TotemBar:CreateActionButton(actionID)
 	return b
 end
 
+function TotemBar:UPDATE_BINDINGS()
+	for _,b in pairs(self.buttons) do
+		b:UpdateHotkey(b.buttonType)
+	end
+end
 
 --[[ right click menu ]]--
 
