@@ -305,7 +305,7 @@ local function getProperSpellName(id)
 end
 
 function SpellButton:SetSpell(id)
-	self:SetAttribute('spell', getProperSpellName(id))
+	self:SetAttribute('spell', id)
 	self.spellID = id
 
 	if self:IsVisible() then

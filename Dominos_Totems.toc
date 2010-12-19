@@ -4,4 +4,4 @@
 ## Author: Tuller
 ## Dependencies: Dominos
 spellButton.lua
-totemBar.lua
+totemBar2.lua
