@@ -39,6 +39,15 @@ function SpellButton:Create()
 	b:SetScript('OnShow', b.OnShow)
 	b:SetScript('OnHide', b.OnHide)
 	b:SetScript('PostClick', b.PostClick)
+	b:SetScript('OnAttributeChanged', function(self, ...)
+		local name, value = ...
+		if name == 'spell' then
+			if self:IsVisible() then
+				self:UpdateSpell()
+				self:UpdateEvents()
+			end
+		end
+	end)
 
 	return b
 end
@@ -195,7 +204,7 @@ end
 function SpellButton:UpdateCooldown()
 	if not self:IsVisible() then return end
 
-	local spellName, spellID = self:GetSpell()
+	local spellID = self:GetSpell()
 	local cooldown = _G[self:GetName() .. 'Cooldown']
 
 	if spellID and IsSpellKnown(spellID) then
@@ -296,26 +305,12 @@ end
 	Spell Property Accessish
 --]]
 
-local function getProperSpellName(id)
-	local name, rank = GetSpellInfo(id)
-	if name and rank and rank ~= '' then
-		return string.format('%s(%s)', name, rank)
-	end
-	return name
-end
-
 function SpellButton:SetSpell(id)
 	self:SetAttribute('spell', id)
-	self.spellID = id
-
-	if self:IsVisible() then
-		self:UpdateSpell()
-		self:UpdateEvents()
-	end
 end
 
 function SpellButton:GetSpell()
-	return self:GetAttribute('spell'), self.spellID
+	return self:GetAttribute('spell')
 end
 
 function SpellButton:GetSpellInfo()
