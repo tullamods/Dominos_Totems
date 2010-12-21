@@ -227,9 +227,9 @@ function TotemBar:CreateTotemFlyout()
 	local flyout = CreateFrame('Frame', nil, nil, 'SecureHandlerAttributeTemplate')
 	flyout:SetScript('OnShow', function(self) RegisterAutoHide(self, 0.2) end)
 
-	local bg = flyout:CreateTexture()
-	bg:SetAllPoints(flyout)
-	bg:SetTexture(0, 0, 0, 0.5)
+	-- local bg = flyout:CreateTexture()
+	-- bg:SetAllPoints(flyout)
+	-- bg:SetTexture(0, 0, 0, 0.5)
 
 	--load totem buttons
 	flyout:SetAttribute('loadButtons', [[
@@ -259,10 +259,6 @@ function TotemBar:CreateTotemFlyout()
 
 		return count
 	]])
-	
-	
-	flyout:SetAttribute('layout', [[
-	]])
 
 	flyout:SetAttribute('layout-left', [[
 		local numTotems = self:GetAttribute('numTotems')
@@ -283,6 +279,9 @@ function TotemBar:CreateTotemFlyout()
 		if numTotems > 0 then
 			self:SetWidth(myButtons[1]:GetWidth()*numTotems + 2*(numTotems - 1))
 			self:SetHeight(myButtons[1]:GetHeight())
+		else
+			self:SetWidth(0)
+			self:SetHeight(0)
 		end
 	]])
 
@@ -305,6 +304,9 @@ function TotemBar:CreateTotemFlyout()
 		if numTotems > 0 then
 			self:SetWidth(myButtons[1]:GetWidth()*numTotems + 2*(numTotems - 1))
 			self:SetHeight(myButtons[1]:GetHeight())
+		else
+			self:SetWidth(0)
+			self:SetHeight(0)
 		end
 	]])
 
@@ -327,6 +329,9 @@ function TotemBar:CreateTotemFlyout()
 		if numTotems > 0 then
 			self:SetWidth(myButtons[1]:GetWidth())
 			self:SetHeight(myButtons[1]:GetHeight()*numTotems + 2*(numTotems - 1))
+		else
+			self:SetWidth(0)
+			self:SetHeight(0)
 		end
 	]])
 
@@ -349,6 +354,9 @@ function TotemBar:CreateTotemFlyout()
 		if numTotems > 0 then
 			self:SetWidth(myButtons[1]:GetWidth())
 			self:SetHeight(myButtons[1]:GetHeight()*numTotems + 2*(numTotems - 1))
+		else
+			self:SetWidth(0)
+			self:SetHeight(0)
 		end
 	]])
 
