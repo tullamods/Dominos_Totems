@@ -436,6 +436,25 @@ function TotemBar:GetCallButton()
 	totemCall:SetAttribute('attribute-frame', totemCall:GetParent())
 	totemCall:SetAttribute('attribute-name', 'state-showCallFlyout')
 	totemCall:SetAttribute('attribute-value', true)
+	
+	totemCall:SetAttribute('_onmousewheel', [[
+		local delta = delta
+		local page = self:GetParent():GetAttribute('state-page') or 1
+		
+		if delta > 0 then
+			page = page + 1
+			if page > self:GetParent():GetAttribute('numPages') then
+				page = 1
+			end
+		else
+			page = page - 1
+			if page <= 0 then
+				page = self:GetParent():GetAttribute('numPages')
+			end
+		end
+		
+		self:GetParent():SetAttribute('state-page', page)
+	]])
 
 	for id, spellId in ipairs(TOTEM_MULTI_CAST_SUMMON_SPELLS) do
 		totemCall:SetAttribute('spell-page' .. id, spellId)
