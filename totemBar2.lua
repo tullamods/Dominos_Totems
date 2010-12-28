@@ -7,8 +7,8 @@
 local MAX_TOTEMS = MAX_TOTEMS
 local NUM_PAGES = NUM_MULTI_CAST_PAGES
 local NUM_BUTTONS_PER_PAGE = NUM_MULTI_CAST_BUTTONS_PER_PAGE
-local RECALL_SPELLS = TOTEM_MULTI_CAST_RECALL_SPELLS
-local SUMMON_SPELLS = TOTEM_MULTI_CAST_SUMMON_SPELLS
+local TOTEM_MULTI_CAST_RECALL_SPELLS = TOTEM_MULTI_CAST_RECALL_SPELLS
+local TOTEM_MULTI_CAST_SUMMON_SPELLS = TOTEM_MULTI_CAST_SUMMON_SPELLS
 local TOTEM_PRIORITIES = SHAMAN_TOTEM_PRIORITIES
 local START_ACTION_ID = 132 --actionID start of the totembar
 local MAX_FLYOUT_BUTTONS = 6
@@ -26,10 +26,10 @@ end
 
 function TotemBar:Create(id)
 	local f = self.super.Create(self, id)
-	
+
 	f.header:SetFrameRef('UIParent', UIParent)
 
-	f.header:SetAttribute('_onstate-showFlyout', [[
+	f.header:SetAttribute('_onstate-showTotemFlyout', [[
 		local totemId = tonumber(newstate)
 		local totem = myTotems[totemId]
 		local totemFlyout = self:GetFrameRef('totemFlyout')
@@ -70,6 +70,63 @@ function TotemBar:Create(id)
 		totemFlyout:Show()
 	]])
 
+	f.header:SetAttribute('_onstate-showCallFlyout', [[
+		local flyout = self:GetFrameRef('callFlyout')
+		if flyout:IsShown() then
+			flyout:Hide()
+			return
+		end
+
+		--show/hide buttons
+		flyout:SetParent(self:GetFrameRef('totemCall'))
+		flyout:RunAttribute('loadButtons')
+
+		--place the totem bar intelligently based on cursor position + bar orientation
+		local UIParent = self:GetFrameRef('UIParent')
+		local isVertical = floor(self:GetParent():GetWidth()) < floor(self:GetParent():GetHeight())
+		if isVertical then
+			local x, y = UIParent:GetMousePosition()
+			if x < 0.5 then
+				flyout:RunAttribute('layout-right')
+			else
+				flyout:RunAttribute('layout-left')
+			end
+		else
+			local x, y = UIParent:GetMousePosition()
+			if y < 0.5 then
+				flyout:RunAttribute('layout-top')
+			else
+				flyout:RunAttribute('layout-bottom')
+			end
+		end
+
+		flyout:Show()
+	]])
+
+	--paging stuff
+	f.header:SetAttribute('baseId', START_ACTION_ID)
+	f.header:SetAttribute('maxTotems', MAX_TOTEMS)
+	f.header:SetAttribute('numPages', #TOTEM_MULTI_CAST_SUMMON_SPELLS)
+
+	f.header:SetAttribute('_onstate-page', [[
+		local page = newstate or 1
+		local startId = self:GetAttribute('baseId') + (page - 1) * self:GetAttribute('maxTotems')
+
+		if myTotems then
+			for _, totem in pairs(myTotems) do
+				totem:SetAttribute('action', totem:GetAttribute('totemId') + startId)
+			end
+		end
+
+		local totemCall = self:GetFrameRef('totemCall')
+		totemCall:SetAttribute('spell', totemCall:GetAttribute('spell-page' .. page))
+
+		self:CallMethod('SetPage', page)
+	]])
+
+	--remember page setting
+	f.header.SetPage = function(self, page) f.sets.page = page end
+
 	return f
 end
 
@@ -78,7 +135,8 @@ function TotemBar:GetDefaults()
 		point = 'CENTER',
 		spacing = 2,
 		showRecall = true,
-		showTotems = true
+		showTotems = true,
+		page = 1,
 	}
 end
 
@@ -98,10 +156,6 @@ function TotemBar:NumButtons()
 	end
 
 	return numButtons
-end
-
-function TotemBar:GetBaseID()
-	return START_ACTION_ID
 end
 
 --handle displaying the totemic recall button
@@ -139,6 +193,13 @@ function TotemBar:LoadButtons()
 		self.header:SetFrameRef('totemFlyout', totemFlyout)
 	end
 
+	--create call flyout, if necessary
+	if not self.callFlyout then
+		local callFlyout = self:CreateCallFlyout()
+		self.callFlyout = callFlyout
+		self.header:SetFrameRef('callFlyout', callFlyout)
+	end
+
 	--remove old buttons
 	for i, b in pairs(buttons) do
 		b:Free()
@@ -162,41 +223,27 @@ function TotemBar:LoadButtons()
 		table.insert(buttons, self:GetRecallButton())
 	end
 
-	self.header:Execute([[
-		control:ChildUpdate('action', nil)
-	]])
-end
-
-function TotemBar:IsCallKnown()
-	return IsSpellKnown(TOTEM_MULTI_CAST_SUMMON_SPELLS[1], false)
-end
-
-function TotemBar:GetCallButton()
-	return self:CreateSpellButton(TOTEM_MULTI_CAST_SUMMON_SPELLS[1])
+	self.header:Execute([[ control:ChildUpdate('action', nil) ]])
+	self.header:SetAttribute('state-page', self.sets.page or 1)
 end
 
 
-function TotemBar:IsRecallKnown()
-	return IsSpellKnown(TOTEM_MULTI_CAST_RECALL_SPELLS[1], false)
-end
-
-function TotemBar:GetRecallButton()
-	return self:CreateSpellButton(TOTEM_MULTI_CAST_RECALL_SPELLS[1])
-end
-
+--[[
+	Totem Button
+--]]
 
 function TotemBar:GetTotemButton(id)
-	local totem = self:CreateActionButton(self:GetBaseID() + id)
+	local totem = self:CreateActionButton(START_ACTION_ID + id)
 	totem:SetAttribute('totemId', id)
 	totem:SetAttribute('type2', 'attribute')
 	totem:SetAttribute('ctrl-type1', 'attribute')
 	totem:SetAttribute('alt-type1', 'attribute')
 	totem:SetAttribute('shift-type1', 'attribute')
-
-	totem.flyout = self:CreateTotemFlyout(totem)
 	totem:SetAttribute('attribute-frame', totem:GetParent())
-	totem:SetAttribute('attribute-name', 'state-showFlyout')
+	totem:SetAttribute('attribute-name', 'state-showTotemFlyout')
 	totem:SetAttribute('attribute-value', id)
+	totem:SetScript('OnDragStart', nil)
+	totem:SetScript('OnReceiveDrag', nil)
 
 	self.header:SetFrameRef('addTotem', totem)
 	self.header:Execute([[
@@ -210,26 +257,14 @@ function TotemBar:GetTotemButton(id)
 	return totem
 end
 
-function TotemBar:CreateSpellButton(spellId)
-	local b = Dominos.SpellButton:New(spellId)
-	b:SetParent(self.header)
-	return b
-end
 
-function TotemBar:CreateActionButton(actionId)
-	local b = Dominos.ActionButton:New(actionId)
-	b:SetParent(self.header)
-	b:LoadAction()
-	return b
-end
+--[[
+	Totem Flyout
+--]]
 
 function TotemBar:CreateTotemFlyout()
 	local flyout = CreateFrame('Frame', nil, nil, 'SecureHandlerAttributeTemplate')
 	flyout:SetScript('OnShow', function(self) RegisterAutoHide(self, 0.2) end)
-
-	-- local bg = flyout:CreateTexture()
-	-- bg:SetAllPoints(flyout)
-	-- bg:SetTexture(0, 0, 0, 0.5)
 
 	--load totem buttons
 	flyout:SetAttribute('loadButtons', [[
@@ -264,7 +299,7 @@ function TotemBar:CreateTotemFlyout()
 		local numTotems = self:GetAttribute('numTotems')
 
 		self:ClearAllPoints()
-		self:SetPoint('RIGHT', self:GetParent(), 'LEFT', 0, -2)
+		self:SetPoint('RIGHT', self:GetParent(), 'LEFT', -2, 0)
 
 		for i = 1, numTotems do
 			local b = myButtons[i]
@@ -272,7 +307,7 @@ function TotemBar:CreateTotemFlyout()
 			if i == 1 then
 				b:SetPoint('RIGHT', self, 'RIGHT', 0, 0)
 			else
-				b:SetPoint('RIGHT', myButtons[i - 1], 'LEFT', 0, -2)
+				b:SetPoint('RIGHT', myButtons[i - 1], 'LEFT', -2, 0)
 			end
 		end
 
@@ -383,6 +418,211 @@ function TotemBar:CreateTotemFlyout()
 	flyout:Hide()
 
 	return flyout
+end
+
+
+--[[
+	Call Button
+--]]
+
+function TotemBar:GetCallButton()
+	local totemCall = self:CreateSpellButton(TOTEM_MULTI_CAST_SUMMON_SPELLS[self.header:GetAttribute('state-page')])
+	totemCall:SetParent(self.header)
+	totemCall:SetAttribute('type2', 'attribute')
+	totemCall:SetAttribute('ctrl-type1', 'attribute')
+	totemCall:SetAttribute('alt-type1', 'attribute')
+	totemCall:SetAttribute('shift-type1', 'attribute')
+
+	totemCall:SetAttribute('attribute-frame', totemCall:GetParent())
+	totemCall:SetAttribute('attribute-name', 'state-showCallFlyout')
+	totemCall:SetAttribute('attribute-value', true)
+
+	for id, spellId in ipairs(TOTEM_MULTI_CAST_SUMMON_SPELLS) do
+		totemCall:SetAttribute('spell-page' .. id, spellId)
+	end
+
+	self.header:SetFrameRef('totemCall', totemCall)
+	return totemCall
+end
+
+function TotemBar:IsCallKnown()
+	return IsSpellKnown(TOTEM_MULTI_CAST_SUMMON_SPELLS[1])
+end
+
+
+--[[
+	Call Flyout
+--]]
+
+function TotemBar:CreateCallFlyout()
+	local flyout = CreateFrame('Frame', nil, nil, 'SecureHandlerAttributeTemplate')
+	flyout:SetScript('OnShow', function(self) RegisterAutoHide(self, 0.2) end)
+
+	flyout:SetAttribute('loadButtons', [[
+		local totemCall = self:GetParent()
+		local numPages = totemCall:GetParent():GetAttribute('numPages') or 0
+		local currentPage = totemCall:GetParent():GetAttribute('state-page')
+		local count = 0
+
+		for page = 1, numPages do
+			if page ~= currentPage then
+				count = count + 1
+
+				local b = myButtons[count]
+				b:SetAttribute('attribute-value', page)
+				b:SetAttribute('spell', totemCall:GetAttribute('spell-page' .. page))
+				b:Show()
+			end
+		end
+
+		for i = count + 1, numPages do
+			local b = myButtons[i]
+			b:SetAttribute('attribute-value', nil)
+			b:SetAttribute('spell', nil)
+			b:Hide()
+		end
+
+		self:SetAttribute('countPages', count)
+	]])
+
+	flyout:SetAttribute('layout-left', [[
+		local numPages = self:GetAttribute('countPages') or 0
+
+		self:ClearAllPoints()
+		self:SetPoint('RIGHT', self:GetParent(), 'LEFT', -2, 0)
+
+		for i = 1, numPages do
+			local b = myButtons[i]
+			b:ClearAllPoints()
+			if i == 1 then
+				b:SetPoint('RIGHT', self, 'RIGHT', 0, 0)
+			else
+				b:SetPoint('RIGHT', myButtons[i - 1], 'LEFT', -2, 0)
+			end
+		end
+
+		self:SetWidth(myButtons[1]:GetWidth()*numPages + 2*(numPages - 1))
+		self:SetHeight(myButtons[1]:GetHeight())
+	]])
+
+	flyout:SetAttribute('layout-right', [[
+		local numPages = self:GetAttribute('countPages') or 0
+
+		self:ClearAllPoints()
+		self:SetPoint('LEFT', self:GetParent(), 'RIGHT', 2, 0)
+
+		for i = 1, #myButtons do
+			local b = myButtons[i]
+			b:ClearAllPoints()
+			if i == 1 then
+				b:SetPoint('LEFT', self, 'LEFT', 0, 0)
+			else
+				b:SetPoint('LEFT', myButtons[i - 1], 'RIGHT', 2, 0)
+			end
+		end
+
+		self:SetWidth(myButtons[1]:GetWidth()*numPages + 2*(numPages - 1))
+		self:SetHeight(myButtons[1]:GetHeight())
+	]])
+
+	flyout:SetAttribute('layout-top', [[
+		local numPages = self:GetAttribute('countPages') or 0
+
+		self:ClearAllPoints()
+		self:SetPoint('BOTTOM', self:GetParent(), 'TOP', 0, 2)
+
+		for i = 1, numPages do
+			local b = myButtons[i]
+			b:ClearAllPoints()
+			if i == 1 then
+				b:SetPoint('BOTTOM', self, 'BOTTOM', 0, 0)
+			else
+				b:SetPoint('BOTTOM', myButtons[i - 1], 'TOP', 0, 2)
+			end
+		end
+
+		self:SetWidth(myButtons[1]:GetWidth())
+		self:SetHeight(myButtons[1]:GetHeight()*numPages + 2*(numPages - 1))
+	]])
+
+	flyout:SetAttribute('layout-bottom', [[
+		local numPages = self:GetAttribute('countPages') or 0
+
+		self:ClearAllPoints()
+		self:SetPoint('TOP', self:GetParent(), 'BOTTOM', 0, -2)
+
+		for i = 1, numPages do
+			local b = myButtons[i]
+			b:ClearAllPoints()
+			if i == 1 then
+				b:SetPoint('TOP', self, 'TOP', 0, 0)
+			else
+				b:SetPoint('TOP', myButtons[i - 1], 'BOTTOM', 0, -2)
+			end
+		end
+
+		self:SetWidth(myButtons[1]:GetWidth())
+		self:SetHeight(myButtons[1]:GetHeight()*numPages + 2*(numPages - 1))
+	]])
+
+	flyout:SetScale(0.8)
+	flyout:Hide()
+
+	for i = 1, #TOTEM_MULTI_CAST_SUMMON_SPELLS do
+		local b = Dominos.SpellButton:New()
+		b:SetParent(flyout)
+		b:SetAttribute('type', 'attribute')
+		b:SetAttribute('attribute-name', 'state-page')
+		b:SetAttribute('attribute-frame', self.header)
+
+		flyout:WrapScript(b, 'PostClick', [[
+			self:GetParent():Hide()
+		]])
+
+		flyout:SetFrameRef('addButton',  b)
+
+		flyout:Execute([[
+			local b = self:GetFrameRef('addButton')
+			myButtons = myButtons or table.new()
+			table.insert(myButtons, b)
+			b:Hide()
+		]])
+	end
+
+	return flyout
+end
+
+
+--[[
+	Recall Button
+--]]
+
+function TotemBar:GetRecallButton()
+	return self:CreateSpellButton(TOTEM_MULTI_CAST_RECALL_SPELLS[1])
+end
+
+function TotemBar:IsRecallKnown()
+	return IsSpellKnown(TOTEM_MULTI_CAST_RECALL_SPELLS[1], false)
+end
+
+
+--[[
+	base button templates
+--]]
+
+--spell
+function TotemBar:CreateSpellButton(spellId)
+	local b = Dominos.SpellButton:New(spellId)
+	b:SetParent(self.header)
+	return b
+end
+
+--action
+function TotemBar:CreateActionButton(actionId)
+	local b = Dominos.ActionButton:New(actionId)
+	b:SetParent(self.header)
+	b:LoadAction()
+	return b
 end
 
 

@@ -29,6 +29,7 @@ end
 function SpellButton:Create()
 	local b = self:Bind(CreateFrame('CheckButton', string.format('DominosSpellButton%d', self:GetNextID()), nil, 'SecureActionButtonTemplate, ActionButtonTemplate'))
 	b:SetAttribute('type', 'spell')
+	b:RegisterForClicks('anyUp')
 
 	b:ClearAllPoints()
 	b:EnableMouseWheel(true)
