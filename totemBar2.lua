@@ -109,21 +109,8 @@ function TotemBar:Create(id)
 	f.header:SetAttribute('numPages', #TOTEM_MULTI_CAST_SUMMON_SPELLS)
 
 	f.header:SetAttribute('_onstate-page', [[
-		local page = newstate or 1
-		local startId = self:GetAttribute('baseId') + (page - 1) * self:GetAttribute('maxTotems')
-
-		if myTotems then
-			for _, totem in pairs(myTotems) do
-				totem:SetAttribute('action', totem:GetAttribute('totemId') + startId)
-			end
-		end
-
-		local totemCall = self:GetFrameRef('totemCall')
-		if totemCall then
-			totemCall:SetAttribute('spell', totemCall:GetAttribute('spell-page' .. page))
-		end
-
 		self:CallMethod('SetPage', page)
+		self:ChildUpdate('page', newstate or 1)
 	]])
 
 	--remember page setting
@@ -153,7 +140,7 @@ function TotemBar:NumButtons()
 		numButtons = numButtons + MAX_TOTEMS
 	end
 
-	if self:ShowingRecall() and self:IsRecallKnown() then
+	if self:ShowingRecall() then
 		numButtons = numButtons + 1
 	end
 
@@ -168,7 +155,7 @@ function TotemBar:SetShowRecall(show)
 end
 
 function TotemBar:ShowingRecall()
-	return self.sets.showRecall
+	return self.sets.showRecall and self:IsRecallKnown()
 end
 
 --handle displaying all of the totem buttons
@@ -203,9 +190,8 @@ function TotemBar:LoadButtons()
 	end
 
 	--remove old buttons
-	for i, b in pairs(buttons) do
-		b:Free()
-		buttons[i] = nil
+	for i, button in pairs(buttons) do
+		self:RemoveButton(i)
 	end
 
 	--add call of X button
@@ -221,12 +207,11 @@ function TotemBar:LoadButtons()
 	end
 
 	--add recall button
-	if self:ShowingRecall() and self:IsRecallKnown() then
+	if self:ShowingRecall() then
 		table.insert(buttons, self:GetRecallButton())
 	end
 
-	self.header:Execute([[ control:ChildUpdate('action', nil) ]])
-	self.header:SetAttribute('state-page', self.sets.page or 1)
+	self.header:Execute([[ control:ChildUpdate('page', self:GetAttribute('state-page')) ]])
 end
 
 
@@ -236,14 +221,15 @@ end
 
 function TotemBar:GetTotemButton(id)
 	local totem = self:CreateActionButton(START_ACTION_ID + id)
-	totem:SetAttribute('totemId', id)
+	totem:SetAttribute('totemId', id)	
 	totem:SetAttribute('type2', 'attribute')
-	totem:SetAttribute('ctrl-type1', 'attribute')
 	totem:SetAttribute('alt-type1', 'attribute')
 	totem:SetAttribute('shift-type1', 'attribute')
+	totem:SetAttribute('ctrl-type1', 'attribute')
 	totem:SetAttribute('attribute-frame', totem:GetParent())
 	totem:SetAttribute('attribute-name', 'state-showTotemFlyout')
 	totem:SetAttribute('attribute-value', id)
+	
 	totem:SetScript('OnDragStart', nil)
 	totem:SetScript('OnReceiveDrag', nil)
 
@@ -430,9 +416,17 @@ end
 function TotemBar:GetCallButton()
 	local totemCall = self:CreateSpellButton(TOTEM_MULTI_CAST_SUMMON_SPELLS[self.header:GetAttribute('state-page')])
 	totemCall:SetParent(self.header)
+	
+	--add recall spells
+	totemCall:SetAttribute('alt-type1', 'spell')
+	totemCall:SetAttribute('alt-spell1', TOTEM_MULTI_CAST_RECALL_SPELLS[1])
+	
+	totemCall:SetAttribute('type3', 'spell')
+	totemCall:SetAttribute('spell3', TOTEM_MULTI_CAST_RECALL_SPELLS[1])
+	
 	totemCall:SetAttribute('type2', 'attribute')
 	totemCall:SetAttribute('ctrl-type1', 'attribute')
-	totemCall:SetAttribute('alt-type1', 'attribute')
+--	totemCall:SetAttribute('alt-type1', 'attribute')
 	totemCall:SetAttribute('shift-type1', 'attribute')
 
 	totemCall:SetAttribute('attribute-frame', totemCall:GetParent())
@@ -457,6 +451,13 @@ function TotemBar:GetCallButton()
 
 		self:GetParent():SetAttribute('state-page', page)
 	]])
+	
+	totemCall:SetAttribute('_childupdate-page', [[
+		local page = message or 1
+		
+		self:SetAttribute('spell', self:GetAttribute('spell-page' .. page))
+	]])
+
 
 	for id, spellId in ipairs(TOTEM_MULTI_CAST_SUMMON_SPELLS) do
 		totemCall:SetAttribute('spell-page' .. id, spellId)
@@ -643,6 +644,15 @@ function TotemBar:CreateActionButton(actionId)
 	local b = Dominos.ActionButton:New(actionId)
 	b:SetParent(self.header)
 	b:LoadAction()
+
+	b:SetAttribute('showgrid', 1)
+	b:SetAttribute('_childupdate-page', [[
+		local page = message or 1
+		local startId = self:GetParent():GetAttribute('baseId') + (page - 1) * self:GetParent():GetAttribute('maxTotems')
+		
+		self:SetAttribute('action', startId + self:GetAttribute('totemId'))
+	]])
+	
 	return b
 end
 
@@ -682,6 +692,12 @@ function TotemBar:CreateMenu()
 	self.menu = Dominos:NewMenu(self.id)
 	self:AddLayoutPanel(self.menu)
 	self.menu:AddAdvancedPanel()
+end
+
+function TotemBar:UPDATE_BINDINGS()
+	for _,b in pairs(self.buttons) do
+		b:UpdateHotkey(b.buttonType)
+	end
 end
 
 
