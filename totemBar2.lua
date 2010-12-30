@@ -13,6 +13,60 @@ local TOTEM_PRIORITIES = SHAMAN_TOTEM_PRIORITIES
 local START_ACTION_ID = 132 --actionID start of the totembar
 local MAX_FLYOUT_BUTTONS = 6
 
+--flyout layout code
+local flyout_doLayout = [[
+	local numButtons, direction = ...
+	local point, relPoint, xOff, yOff
+	
+	if direction == 'left' then
+		point = 'RIGHT'
+		relPoint = 'LEFT'
+		xOff = -4
+		yOff = 0
+	elseif direction == 'right' then
+		point = 'LEFT'
+		relPoint = 'RIGHT'
+		xOff = 4
+		yOff = 0
+	elseif direction == 'top' then
+		point = 'BOTTOM'
+		relPoint = 'TOP'
+		xOff = 0
+		yOff = 4
+	elseif direction == 'bottom' then
+		point = 'TOP'
+		relPoint = 'BOTTOM'
+		xOff = 0
+		yOff = -4
+	end
+
+	self:ClearAllPoints()
+	self:SetPoint(point, self:GetParent(), relPoint, xOff, yOff)
+
+	for i = 1, numButtons do
+		local b = myButtons[i]
+		b:ClearAllPoints()
+		if i == 1 then
+			b:SetPoint(point, self, point, 0, 0)
+		else
+			b:SetPoint(point, myButtons[i - 1], relPoint, xOff, yOff)
+		end
+	end
+
+	if numButtons > 0 then
+		if direction == 'left' or direction == 'right' then
+			self:SetWidth(myButtons[1]:GetWidth()*numButtons + math.abs(xOff)*(numButtons - 1))
+			self:SetHeight(myButtons[1]:GetHeight())
+		else
+			self:SetWidth(myButtons[1]:GetWidth())
+			self:SetHeight(myButtons[1]:GetHeight()*numButtons + math.abs(yOff)*(numButtons - 1))
+		end
+	else
+		self:SetWidth(0)
+		self:SetHeight(0)
+	end
+]]
+
 
 local TotemBar = Dominos:CreateClass('Frame', Dominos.Frame)
 
@@ -28,6 +82,25 @@ function TotemBar:Create(id)
 	local f = self.super.Create(self, id)
 
 	f.header:SetFrameRef('UIParent', UIParent)
+	
+	f.header:SetAttribute('getFlyoutDirection', [[
+		local isVertical = ...
+		local UIParent = self:GetFrameRef('UIParent')
+				
+		if isVertical then
+			local x, y = UIParent:GetMousePosition()
+			if x < 0.5 then
+				return 'right'
+			end
+			return 'left'
+		end
+		
+		local x, y = UIParent:GetMousePosition()
+		if y < 0.5 then
+			return 'top'
+		end
+		return 'bottom'
+	]])
 
 	f.header:SetAttribute('_onstate-showTotemFlyout', [[
 		local totemId = tonumber(newstate)
@@ -49,24 +122,9 @@ function TotemBar:Create(id)
 		totemFlyout:RunAttribute('loadButtons', GetMultiCastTotemSpells(totemId))
 
 		--place the totem bar intelligently based on cursor position + bar orientation
-		local UIParent = self:GetFrameRef('UIParent')
 		local isVertical = floor(self:GetParent():GetWidth()) < floor(self:GetParent():GetHeight())
-		if isVertical then
-			local x, y = UIParent:GetMousePosition()
-			if x < 0.5 then
-				totemFlyout:RunAttribute('layout-right')
-			else
-				totemFlyout:RunAttribute('layout-left')
-			end
-		else
-			local x, y = UIParent:GetMousePosition()
-			if y < 0.5 then
-				totemFlyout:RunAttribute('layout-top')
-			else
-				totemFlyout:RunAttribute('layout-bottom')
-			end
-		end
-
+		local direction = self:RunAttribute('getFlyoutDirection', isVertical)
+		totemFlyout:RunAttribute('layout', totemFlyout:GetAttribute('numTotems'), direction)
 		totemFlyout:Show()
 	]])
 
@@ -82,24 +140,9 @@ function TotemBar:Create(id)
 		flyout:RunAttribute('loadButtons')
 
 		--place the totem bar intelligently based on cursor position + bar orientation
-		local UIParent = self:GetFrameRef('UIParent')
 		local isVertical = floor(self:GetParent():GetWidth()) < floor(self:GetParent():GetHeight())
-		if isVertical then
-			local x, y = UIParent:GetMousePosition()
-			if x < 0.5 then
-				flyout:RunAttribute('layout-right')
-			else
-				flyout:RunAttribute('layout-left')
-			end
-		else
-			local x, y = UIParent:GetMousePosition()
-			if y < 0.5 then
-				flyout:RunAttribute('layout-top')
-			else
-				flyout:RunAttribute('layout-bottom')
-			end
-		end
-
+		local direction = self:RunAttribute('getFlyoutDirection', isVertical)
+		flyout:RunAttribute('layout', self:GetAttribute('numPages'), direction)
 		flyout:Show()
 	]])
 
@@ -282,106 +325,8 @@ function TotemBar:CreateTotemFlyout()
 
 		return count
 	]])
-
-	flyout:SetAttribute('layout-left', [[
-		local numTotems = self:GetAttribute('numTotems')
-
-		self:ClearAllPoints()
-		self:SetPoint('RIGHT', self:GetParent(), 'LEFT', -2, 0)
-
-		for i = 1, numTotems do
-			local b = myButtons[i]
-			b:ClearAllPoints()
-			if i == 1 then
-				b:SetPoint('RIGHT', self, 'RIGHT', 0, 0)
-			else
-				b:SetPoint('RIGHT', myButtons[i - 1], 'LEFT', -2, 0)
-			end
-		end
-
-		if numTotems > 0 then
-			self:SetWidth(myButtons[1]:GetWidth()*numTotems + 2*(numTotems - 1))
-			self:SetHeight(myButtons[1]:GetHeight())
-		else
-			self:SetWidth(0)
-			self:SetHeight(0)
-		end
-	]])
-
-	flyout:SetAttribute('layout-right', [[
-		local numTotems = self:GetAttribute('numTotems')
-
-		self:ClearAllPoints()
-		self:SetPoint('LEFT', self:GetParent(), 'RIGHT', 2, 0)
-
-		for i = 1, numTotems do
-			local b = myButtons[i]
-			b:ClearAllPoints()
-			if i == 1 then
-				b:SetPoint('LEFT', self, 'LEFT', 0, 0)
-			else
-				b:SetPoint('LEFT', myButtons[i - 1], 'RIGHT', 2, 0)
-			end
-		end
-
-		if numTotems > 0 then
-			self:SetWidth(myButtons[1]:GetWidth()*numTotems + 2*(numTotems - 1))
-			self:SetHeight(myButtons[1]:GetHeight())
-		else
-			self:SetWidth(0)
-			self:SetHeight(0)
-		end
-	]])
-
-	flyout:SetAttribute('layout-top', [[
-		local numTotems = self:GetAttribute('numTotems')
-
-		self:ClearAllPoints()
-		self:SetPoint('BOTTOM', self:GetParent(), 'TOP', 0, 2)
-
-		for i = 1, numTotems do
-			local b = myButtons[i]
-			b:ClearAllPoints()
-			if i == 1 then
-				b:SetPoint('BOTTOM', self, 'BOTTOM', 0, 0)
-			else
-				b:SetPoint('BOTTOM', myButtons[i - 1], 'TOP', 0, 2)
-			end
-		end
-
-		if numTotems > 0 then
-			self:SetWidth(myButtons[1]:GetWidth())
-			self:SetHeight(myButtons[1]:GetHeight()*numTotems + 2*(numTotems - 1))
-		else
-			self:SetWidth(0)
-			self:SetHeight(0)
-		end
-	]])
-
-	flyout:SetAttribute('layout-bottom', [[
-		local numTotems = self:GetAttribute('numTotems')
-
-		self:ClearAllPoints()
-		self:SetPoint('TOP', self:GetParent(), 'BOTTOM', 0, -2)
-
-		for i = 1, numTotems do
-			local b = myButtons[i]
-			b:ClearAllPoints()
-			if i == 1 then
-				b:SetPoint('TOP', self, 'TOP', 0, 0)
-			else
-				b:SetPoint('TOP', myButtons[i - 1], 'BOTTOM', 0, -2)
-			end
-		end
-
-		if numTotems > 0 then
-			self:SetWidth(myButtons[1]:GetWidth())
-			self:SetHeight(myButtons[1]:GetHeight()*numTotems + 2*(numTotems - 1))
-		else
-			self:SetWidth(0)
-			self:SetHeight(0)
-		end
-	]])
+	
+	flyout:SetAttribute('layout', flyout_doLayout)
 
 	for i = 1, MAX_FLYOUT_BUTTONS do
 		local b = Dominos.SpellButton:New()
@@ -479,6 +424,8 @@ end
 function TotemBar:CreateCallFlyout()
 	local flyout = CreateFrame('Frame', nil, nil, 'SecureHandlerAttributeTemplate')
 	flyout:SetScript('OnShow', function(self) RegisterAutoHide(self, 0.2) end)
+	flyout:SetScale(0.8)
+	flyout:Hide()
 
 	flyout:SetAttribute('loadButtons', [[
 		local totemCall = self:GetParent()
@@ -506,89 +453,8 @@ function TotemBar:CreateCallFlyout()
 
 		self:SetAttribute('countPages', count)
 	]])
-
-	flyout:SetAttribute('layout-left', [[
-		local numPages = self:GetAttribute('countPages') or 0
-
-		self:ClearAllPoints()
-		self:SetPoint('RIGHT', self:GetParent(), 'LEFT', -2, 0)
-
-		for i = 1, numPages do
-			local b = myButtons[i]
-			b:ClearAllPoints()
-			if i == 1 then
-				b:SetPoint('RIGHT', self, 'RIGHT', 0, 0)
-			else
-				b:SetPoint('RIGHT', myButtons[i - 1], 'LEFT', -2, 0)
-			end
-		end
-
-		self:SetWidth(myButtons[1]:GetWidth()*numPages + 2*(numPages - 1))
-		self:SetHeight(myButtons[1]:GetHeight())
-	]])
-
-	flyout:SetAttribute('layout-right', [[
-		local numPages = self:GetAttribute('countPages') or 0
-
-		self:ClearAllPoints()
-		self:SetPoint('LEFT', self:GetParent(), 'RIGHT', 2, 0)
-
-		for i = 1, #myButtons do
-			local b = myButtons[i]
-			b:ClearAllPoints()
-			if i == 1 then
-				b:SetPoint('LEFT', self, 'LEFT', 0, 0)
-			else
-				b:SetPoint('LEFT', myButtons[i - 1], 'RIGHT', 2, 0)
-			end
-		end
-
-		self:SetWidth(myButtons[1]:GetWidth()*numPages + 2*(numPages - 1))
-		self:SetHeight(myButtons[1]:GetHeight())
-	]])
-
-	flyout:SetAttribute('layout-top', [[
-		local numPages = self:GetAttribute('countPages') or 0
-
-		self:ClearAllPoints()
-		self:SetPoint('BOTTOM', self:GetParent(), 'TOP', 0, 2)
-
-		for i = 1, numPages do
-			local b = myButtons[i]
-			b:ClearAllPoints()
-			if i == 1 then
-				b:SetPoint('BOTTOM', self, 'BOTTOM', 0, 0)
-			else
-				b:SetPoint('BOTTOM', myButtons[i - 1], 'TOP', 0, 2)
-			end
-		end
-
-		self:SetWidth(myButtons[1]:GetWidth())
-		self:SetHeight(myButtons[1]:GetHeight()*numPages + 2*(numPages - 1))
-	]])
-
-	flyout:SetAttribute('layout-bottom', [[
-		local numPages = self:GetAttribute('countPages') or 0
-
-		self:ClearAllPoints()
-		self:SetPoint('TOP', self:GetParent(), 'BOTTOM', 0, -2)
-
-		for i = 1, numPages do
-			local b = myButtons[i]
-			b:ClearAllPoints()
-			if i == 1 then
-				b:SetPoint('TOP', self, 'TOP', 0, 0)
-			else
-				b:SetPoint('TOP', myButtons[i - 1], 'BOTTOM', 0, -2)
-			end
-		end
-
-		self:SetWidth(myButtons[1]:GetWidth())
-		self:SetHeight(myButtons[1]:GetHeight()*numPages + 2*(numPages - 1))
-	]])
-
-	flyout:SetScale(0.8)
-	flyout:Hide()
+	
+	flyout:SetAttribute('layout', flyout_doLayout)
 
 	for i = 1, #TOTEM_MULTI_CAST_SUMMON_SPELLS do
 		local b = Dominos.SpellButton:New()
