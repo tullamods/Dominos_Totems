@@ -224,7 +224,10 @@ function SpellButton:UpdateColor()
 	local normalTexture = _G[self:GetName() .. 'NormalTexture']
 
 	if spell then
-		local isUsable, notEnoughMana = IsUsableSpell(spell)
+		local isUsable, notEnoughMana = false, false
+		if IsSpellKnown(spell) then
+			isUsable, notEnoughMana = IsUsableSpell(spell)
+		end
 
 		if isUsable then
 			--out of range coloring
