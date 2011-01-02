@@ -3,10 +3,12 @@
 		A totem bar for Dominos that mimics the standard totem bar
 --]]
 
+if not select(2, UnitClass('player')) == 'SHAMAN' then
+	return
+end
+
 --hurray for constants
 local MAX_TOTEMS = MAX_TOTEMS
-local NUM_PAGES = NUM_MULTI_CAST_PAGES
-local NUM_BUTTONS_PER_PAGE = NUM_MULTI_CAST_BUTTONS_PER_PAGE
 local TOTEM_MULTI_CAST_RECALL_SPELLS = TOTEM_MULTI_CAST_RECALL_SPELLS
 local TOTEM_MULTI_CAST_SUMMON_SPELLS = TOTEM_MULTI_CAST_SUMMON_SPELLS
 local TOTEM_PRIORITIES = SHAMAN_TOTEM_PRIORITIES
@@ -17,7 +19,7 @@ local MAX_FLYOUT_BUTTONS = 6
 local flyout_doLayout = [[
 	local numButtons, direction = ...
 	local point, relPoint, xOff, yOff
-	
+
 	if direction == 'left' then
 		point = 'RIGHT'
 		relPoint = 'LEFT'
@@ -70,8 +72,9 @@ local flyout_doLayout = [[
 
 local TotemBar = Dominos:CreateClass('Frame', Dominos.Frame)
 
-function TotemBar:New()
-	local f = self.super.New(self, 'totem')
+function TotemBar:New(pageId)
+	local f = self.super.New(self, 'totem' .. pageId)
+	f.totemId = pageId
 	f:LoadButtons()
 	f:Layout()
 
@@ -82,11 +85,11 @@ function TotemBar:Create(id)
 	local f = self.super.Create(self, id)
 
 	f.header:SetFrameRef('UIParent', UIParent)
-	
+
 	f.header:SetAttribute('getFlyoutDirection', [[
 		local isVertical = ...
 		local UIParent = self:GetFrameRef('UIParent')
-				
+
 		if isVertical then
 			local x, y = UIParent:GetMousePosition()
 			if x < 0.5 then
@@ -94,7 +97,7 @@ function TotemBar:Create(id)
 			end
 			return 'left'
 		end
-		
+
 		local x, y = UIParent:GetMousePosition()
 		if y < 0.5 then
 			return 'top'
@@ -168,7 +171,8 @@ function TotemBar:GetDefaults()
 		spacing = 2,
 		showRecall = true,
 		showTotems = true,
-		page = 1,
+		page = self.totemId or 1,
+		hidden = self.totemId > 1
 	}
 end
 
@@ -263,8 +267,8 @@ end
 --]]
 
 function TotemBar:GetTotemButton(id)
-	local totem = self:CreateActionButton(START_ACTION_ID + id)
-	totem:SetAttribute('totemId', id)	
+	local totem = self:CreateActionButton(id + START_ACTION_ID + (self.totemId - 1) * MAX_TOTEMS)
+	totem:SetAttribute('totemId', id)
 	totem:SetAttribute('type2', 'attribute')
 	totem:SetAttribute('alt-type1', 'attribute')
 	totem:SetAttribute('shift-type1', 'attribute')
@@ -272,7 +276,7 @@ function TotemBar:GetTotemButton(id)
 	totem:SetAttribute('attribute-frame', totem:GetParent())
 	totem:SetAttribute('attribute-name', 'state-showTotemFlyout')
 	totem:SetAttribute('attribute-value', id)
-	
+
 	totem:SetScript('OnDragStart', nil)
 	totem:SetScript('OnReceiveDrag', nil)
 
@@ -325,7 +329,7 @@ function TotemBar:CreateTotemFlyout()
 
 		return count
 	]])
-	
+
 	flyout:SetAttribute('layout', flyout_doLayout)
 
 	for i = 1, MAX_FLYOUT_BUTTONS do
@@ -361,14 +365,14 @@ end
 function TotemBar:GetCallButton()
 	local totemCall = self:CreateSpellButton(TOTEM_MULTI_CAST_SUMMON_SPELLS[self.header:GetAttribute('state-page')])
 	totemCall:SetParent(self.header)
-	
+
 	--add recall spells
 	totemCall:SetAttribute('alt-type1', 'spell')
 	totemCall:SetAttribute('alt-spell1', TOTEM_MULTI_CAST_RECALL_SPELLS[1])
-	
+
 	totemCall:SetAttribute('type3', 'spell')
 	totemCall:SetAttribute('spell3', TOTEM_MULTI_CAST_RECALL_SPELLS[1])
-	
+
 	totemCall:SetAttribute('type2', 'attribute')
 	totemCall:SetAttribute('ctrl-type1', 'attribute')
 --	totemCall:SetAttribute('alt-type1', 'attribute')
@@ -396,10 +400,10 @@ function TotemBar:GetCallButton()
 
 		self:GetParent():SetAttribute('state-page', page)
 	]])
-	
+
 	totemCall:SetAttribute('_childupdate-page', [[
 		local page = message or 1
-		
+
 		self:SetAttribute('spell', self:GetAttribute('spell-page' .. page))
 	]])
 
@@ -453,7 +457,7 @@ function TotemBar:CreateCallFlyout()
 
 		self:SetAttribute('countPages', count)
 	]])
-	
+
 	flyout:SetAttribute('layout', flyout_doLayout)
 
 	for i = 1, #TOTEM_MULTI_CAST_SUMMON_SPELLS do
@@ -515,10 +519,10 @@ function TotemBar:CreateActionButton(actionId)
 	b:SetAttribute('_childupdate-page', [[
 		local page = message or 1
 		local startId = self:GetParent():GetAttribute('baseId') + (page - 1) * self:GetParent():GetAttribute('maxTotems')
-		
+
 		self:SetAttribute('action', startId + self:GetAttribute('totemId'))
 	]])
-	
+
 	return b
 end
 
@@ -572,9 +576,16 @@ end
 local DTB = Dominos:NewModule('Totems')
 
 function DTB:Load()
-	self.frame = TotemBar:New()
+	for i = 1, #TOTEM_MULTI_CAST_SUMMON_SPELLS do
+		TotemBar:New(i)
+	end
 end
 
 function DTB:Unload()
-	self.frame:Free()
+	for i = 1, #TOTEM_MULTI_CAST_SUMMON_SPELLS do
+		local f = Dominos.Frame:Get('totem' .. i)
+		if f then
+			f:Free()
+		end
+	end
 end
