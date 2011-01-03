@@ -258,6 +258,7 @@ function TotemBar:LoadButtons()
 		table.insert(buttons, self:GetRecallButton())
 	end
 
+	selfcd .header:SetAttribute('state-page', self.sets.page or self.totemId)
 	self.header:Execute([[ control:ChildUpdate('page', self:GetAttribute('state-page')) ]])
 end
 
