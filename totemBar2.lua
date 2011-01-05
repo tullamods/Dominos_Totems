@@ -166,13 +166,14 @@ function TotemBar:Create(id)
 end
 
 function TotemBar:GetDefaults()
+	local totemId = tonumber(self.id:match('totem(%d+)'))
 	return {
 		point = 'CENTER',
 		spacing = 2,
 		showRecall = true,
 		showTotems = true,
-		page = self.totemId or 1,
-		hidden = self.totemId > 1
+		page = totemId or 1,
+		hidden = totemId > 1
 	}
 end
 
@@ -258,7 +259,7 @@ function TotemBar:LoadButtons()
 		table.insert(buttons, self:GetRecallButton())
 	end
 
-	selfcd .header:SetAttribute('state-page', self.sets.page or self.totemId)
+	self.header:SetAttribute('state-page', self.sets.page or self.totemId)
 	self.header:Execute([[ control:ChildUpdate('page', self:GetAttribute('state-page')) ]])
 end
 
