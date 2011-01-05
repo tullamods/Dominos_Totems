@@ -3,7 +3,7 @@
 		A totem bar for Dominos that mimics the standard totem bar
 --]]
 
-if not select(2, UnitClass('player')) == 'SHAMAN' then
+if select(2, UnitClass('player')) ~= 'SHAMAN' then
 	return
 end
 
