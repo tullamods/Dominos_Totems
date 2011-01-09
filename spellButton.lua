@@ -224,6 +224,7 @@ function SpellButton:UpdateColor()
 	local normalTexture = _G[self:GetName() .. 'NormalTexture']
 
 	if spell then
+		--color unknown spells as if they were disabled
 		local isUsable, notEnoughMana = false, false
 		if IsSpellKnown(spell) then
 			isUsable, notEnoughMana = IsUsableSpell(spell)
