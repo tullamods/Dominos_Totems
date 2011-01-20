@@ -429,10 +429,7 @@ end
 
 function TotemBar:CreateCallFlyout()
 	local flyout = CreateFrame('Frame', nil, nil, 'SecureHandlerAttributeTemplate, SecureHandlerShowHideTemplate')
-	flyout:SetAttribute('_onshow', [[
-		self:RegisterAutoHide(0.2) 
-	]])
-	
+	flyout:SetAttribute('_onshow', [[ self:RegisterAutoHide(0.2); self:AddToAutoHide(self:GetParent()) ]])
 
 --	flyout:SetScript('OnShow', function(self) RegisterAutoHide(self, 0.2) end)
 	flyout:SetScale(0.8)
