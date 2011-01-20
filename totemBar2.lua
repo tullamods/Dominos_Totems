@@ -300,8 +300,8 @@ end
 --]]
 
 function TotemBar:CreateTotemFlyout()
-	local flyout = CreateFrame('Frame', nil, nil, 'SecureHandlerAttributeTemplate')
-	flyout:SetScript('OnShow', function(self) RegisterAutoHide(self, 0.2) end)
+	local flyout = CreateFrame('Frame', nil, nil, 'SecureHandlerAttributeTemplate, SecureHandlerShowHideTemplate')
+	flyout:SetAttribute('_onshow', [[ self:RegisterAutoHide(0.2) ]])
 
 	--load totem buttons
 	flyout:SetAttribute('loadButtons', [[
@@ -428,8 +428,13 @@ end
 --]]
 
 function TotemBar:CreateCallFlyout()
-	local flyout = CreateFrame('Frame', nil, nil, 'SecureHandlerAttributeTemplate')
-	flyout:SetScript('OnShow', function(self) RegisterAutoHide(self, 0.2) end)
+	local flyout = CreateFrame('Frame', nil, nil, 'SecureHandlerAttributeTemplate, SecureHandlerShowHideTemplate')
+	flyout:SetAttribute('_onshow', [[
+		self:RegisterAutoHide(0.2) 
+	]])
+	
+
+--	flyout:SetScript('OnShow', function(self) RegisterAutoHide(self, 0.2) end)
 	flyout:SetScale(0.8)
 	flyout:Hide()
 
