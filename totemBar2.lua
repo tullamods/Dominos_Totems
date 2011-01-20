@@ -301,7 +301,7 @@ end
 
 function TotemBar:CreateTotemFlyout()
 	local flyout = CreateFrame('Frame', nil, nil, 'SecureHandlerAttributeTemplate, SecureHandlerShowHideTemplate')
-	flyout:SetAttribute('_onshow', [[ self:RegisterAutoHide(0.2) ]])
+	flyout:SetAttribute('_onshow', [[ self:RegisterAutoHide(0.2); self:AddToAutoHide(self:GetParent()) ]])
 
 	--load totem buttons
 	flyout:SetAttribute('loadButtons', [[
