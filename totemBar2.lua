@@ -279,8 +279,8 @@ function TotemBar:GetTotemButton(id)
 	totem:SetAttribute('attribute-name', 'state-showTotemFlyout')
 	totem:SetAttribute('attribute-value', id)
 
-	totem:SetScript('OnDragStart', nil)
-	totem:SetScript('OnReceiveDrag', nil)
+	-- totem:SetScript('OnDragStart', nil)
+	-- totem:SetScript('OnReceiveDrag', nil)
 
 	self.header:SetFrameRef('addTotem', totem)
 	self.header:Execute([[
