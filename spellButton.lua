@@ -118,14 +118,16 @@ function SpellButton:OnHide()
 end
 
 function SpellButton:OnEnter()
-	local spell = self:GetSpell()
-	if spell then
-		if GetCVar('UberTooltips') == '1' then
-			GameTooltip_SetDefaultAnchor(GameTooltip, self)
-		else
-			GameTooltip:SetOwner(self, 'ANCHOR_RIGHT')
+	if Dominos:ShouldShowTooltips() then
+		local spell = self:GetSpell()
+		if spell then
+			if GetCVar('UberTooltips') == '1' then
+				GameTooltip_SetDefaultAnchor(GameTooltip, self)
+			else
+				GameTooltip:SetOwner(self, 'ANCHOR_RIGHT')
+			end
+			GameTooltip:SetHyperlink(GetSpellLink(spell))
 		end
-		GameTooltip:SetHyperlink(GetSpellLink(spell))
 	end
 	LibStub('LibKeyBound-1.0'):Set(self)
 end
