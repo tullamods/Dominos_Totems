@@ -261,6 +261,8 @@ function TotemBar:LoadButtons()
 
 	self.header:SetAttribute('state-page', self.sets.page or self.totemId)
 	self.header:Execute([[ control:ChildUpdate('page', self:GetAttribute('state-page')) ]])
+	
+	self:UpdateClickThrough()
 end
 
 
