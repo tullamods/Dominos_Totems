@@ -512,6 +512,8 @@ end
 function TotemBar:CreateSpellButton(spellId)
 	local b = Dominos.SpellButton:New(spellId)
 	b:SetParent(self.header)
+	
+	Dominos:Masque('Totem Bar', b)
 	return b
 end
 
@@ -528,7 +530,11 @@ function TotemBar:CreateActionButton(actionId)
 
 		self:SetAttribute('action', startId + self:GetAttribute('totemId'))
 	]])
-
+	
+	if Dominos:RemoveMasque('Action Bar', b) then
+		Dominos:Masque('Totem Bar', b)
+	end
+	
 	return b
 end
 
